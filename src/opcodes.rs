@@ -1,11 +1,3 @@
-#![allow(dead_code)]
-use once_cell::sync::OnceCell;
-
-pub struct ExpOpCode<'a> {
-    pub hex: u8,
-    pub str: &'a str,
-}
-
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct OpCode(pub u8);
 
@@ -14,12 +6,10 @@ impl OpCode {
         Self(uint)
     }
 
-    pub fn try_from_u8(opcode: u8) -> Option<OpCode> {
-        EXP_OPCODE_JUMPMAP.get().unwrap()[opcode as usize].map(|_| OpCode(opcode))
-    }
-
     pub fn as_str(&self) -> &'static str {
-        if let Some(str) = EXP_OPCODE_JUMPMAP.get().unwrap()[self.0 as usize] {
+        if self.0 == 0x5f {
+            "0x00"
+        } else if let Some(str) = OPCODE_JUMPMAP.get(self.0 as usize).unwrap() {
             str
         } else {
             "unknown"
@@ -32,14 +22,9 @@ impl OpCode {
     }
 
     pub fn is_valid(&self) -> bool {
-        match EXP_OPCODE_JUMPMAP.get() {
-            Some(map) => map[self.0 as usize].is_some(),
-            _ => false,
-        }
+        OPCODE_JUMPMAP[self.0 as usize].is_some()
     }
 }
-
-pub static EXP_OPCODE_JUMPMAP: OnceCell<[Option<&'static str>; 256]> = OnceCell::new();
 
 pub static OPCODE_JUMPMAP: [Option<&'static str>; 256] = [
     /* 0x00 */ Some("STOP"),
@@ -115,8 +100,8 @@ pub static OPCODE_JUMPMAP: [Option<&'static str>; 256] = [
     /* 0x46 */ Some("CHAINID"),
     /* 0x47 */ Some("SELFBALANCE"),
     /* 0x48 */ Some("BASEFEE"),
-    /* 0x49 */ None,
-    /* 0x4a */ None,
+    /* 0x49 */ Some("BLOBHASH"),
+    /* 0x4a */ Some("BLOBBASEFEE"),
     /* 0x4b */ None,
     /* 0x4c */ None,
     /* 0x4d */ None,
@@ -134,10 +119,10 @@ pub static OPCODE_JUMPMAP: [Option<&'static str>; 256] = [
     /* 0x59 */ Some("MSIZE"),
     /* 0x5a */ Some("GAS"),
     /* 0x5b */ Some("JUMPDEST"),
-    /* 0x5c */ None,
-    /* 0x5d */ None,
-    /* 0x5e */ None,
-    /* 0x5f */ None,
+    /* 0x5c */ Some("TLOAD"),
+    /* 0x5d */ Some("TSTORE"),
+    /* 0x5e */ Some("MCOPY"),
+    /* 0x5f */ Some("PUSH0"),
     /* 0x60 */ Some("PUSH1"),
     /* 0x61 */ Some("PUSH2"),
     /* 0x62 */ Some("PUSH3"),
@@ -324,26 +309,56 @@ pub const OR: u8 = 0x17;
 pub const XOR: u8 = 0x18;
 pub const NOT: u8 = 0x19;
 pub const BYTE: u8 = 0x1a;
+pub const SHL: u8 = 0x1b;
+pub const SHR: u8 = 0x1c;
+pub const SAR: u8 = 0x1d;
 
+pub const SHA3: u8 = 0x20;
+
+pub const ADDRESS: u8 = 0x30;
+pub const BALANCE: u8 = 0x31;
+pub const ORIGIN: u8 = 0x32;
+pub const CALLER: u8 = 0x33;
+pub const CALLVALUE: u8 = 0x34;
 pub const CALLDATALOAD: u8 = 0x35;
 pub const CALLDATASIZE: u8 = 0x36;
 pub const CALLDATACOPY: u8 = 0x37;
 pub const CODESIZE: u8 = 0x38;
 pub const CODECOPY: u8 = 0x39;
+pub const GASPRICE: u8 = 0x3a;
+pub const EXTCODESIZE: u8 = 0x3b;
+pub const EXTCODECOPY: u8 = 0x3c;
+pub const RETURNDATASIZE: u8 = 0x3d;
+pub const RETURNDATACOPY: u8 = 0x3e;
+pub const EXTCODEHASH: u8 = 0x3f;
+pub const BLOCKHASH: u8 = 0x40;
+pub const COINBASE: u8 = 0x41;
+pub const TIMESTAMP: u8 = 0x42;
+pub const NUMBER: u8 = 0x43;
+pub const DIFFICULTY: u8 = 0x44;
+pub const GASLIMIT: u8 = 0x45;
+pub const CHAINID: u8 = 0x46;
+pub const SELFBALANCE: u8 = 0x47;
+pub const BASEFEE: u8 = 0x48;
+pub const BLOBHASH: u8 = 0x49;
+pub const BLOBBASEFEE: u8 = 0x4a;
 
-pub const SHL: u8 = 0x1b;
-pub const SHR: u8 = 0x1c;
-pub const SAR: u8 = 0x1d;
-pub const SHA3: u8 = 0x20;
 pub const POP: u8 = 0x50;
 pub const MLOAD: u8 = 0x51;
 pub const MSTORE: u8 = 0x52;
 pub const MSTORE8: u8 = 0x53;
+pub const SLOAD: u8 = 0x54;
+pub const SSTORE: u8 = 0x55;
 pub const JUMP: u8 = 0x56;
 pub const JUMPI: u8 = 0x57;
 pub const PC: u8 = 0x58;
 pub const MSIZE: u8 = 0x59;
+pub const GAS: u8 = 0x5a;
 pub const JUMPDEST: u8 = 0x5b;
+pub const TLOAD: u8 = 0x5c;
+pub const TSTORE: u8 = 0x5d;
+pub const MCOPY: u8 = 0x5e;
+pub const PUSH0: u8 = 0x5f;
 pub const PUSH1: u8 = 0x60;
 pub const PUSH2: u8 = 0x61;
 pub const PUSH3: u8 = 0x62;
@@ -408,41 +423,21 @@ pub const SWAP13: u8 = 0x9c;
 pub const SWAP14: u8 = 0x9d;
 pub const SWAP15: u8 = 0x9e;
 pub const SWAP16: u8 = 0x9f;
-pub const RETURN: u8 = 0xf3;
-pub const REVERT: u8 = 0xfd;
-pub const INVALID: u8 = 0xfe;
-pub const ADDRESS: u8 = 0x30;
-pub const BALANCE: u8 = 0x31;
-pub const BASEFEE: u8 = 0x48;
-pub const ORIGIN: u8 = 0x32;
-pub const CALLER: u8 = 0x33;
-pub const CALLVALUE: u8 = 0x34;
-pub const GASPRICE: u8 = 0x3a;
-pub const EXTCODESIZE: u8 = 0x3b;
-pub const EXTCODECOPY: u8 = 0x3c;
-pub const EXTCODEHASH: u8 = 0x3f;
-pub const RETURNDATASIZE: u8 = 0x3d;
-pub const RETURNDATACOPY: u8 = 0x3e;
-pub const BLOCKHASH: u8 = 0x40;
-pub const COINBASE: u8 = 0x41;
-pub const TIMESTAMP: u8 = 0x42;
-pub const NUMBER: u8 = 0x43;
-pub const DIFFICULTY: u8 = 0x44;
-pub const GASLIMIT: u8 = 0x45;
-pub const SELFBALANCE: u8 = 0x47;
-pub const SLOAD: u8 = 0x54;
-pub const SSTORE: u8 = 0x55;
-pub const GAS: u8 = 0x5a;
 pub const LOG0: u8 = 0xa0;
 pub const LOG1: u8 = 0xa1;
 pub const LOG2: u8 = 0xa2;
 pub const LOG3: u8 = 0xa3;
 pub const LOG4: u8 = 0xa4;
+
 pub const CREATE: u8 = 0xf0;
-pub const CREATE2: u8 = 0xf5;
 pub const CALL: u8 = 0xf1;
 pub const CALLCODE: u8 = 0xf2;
+pub const RETURN: u8 = 0xf3;
 pub const DELEGATECALL: u8 = 0xf4;
+pub const CREATE2: u8 = 0xf5;
+
 pub const STATICCALL: u8 = 0xfa;
+
+pub const REVERT: u8 = 0xfd;
+pub const INVALID: u8 = 0xfe;
 pub const SELFDESTRUCT: u8 = 0xff;
-pub const CHAINID: u8 = 0x46;

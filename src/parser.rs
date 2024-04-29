@@ -1,9 +1,7 @@
-use eyre::Context;
-use revm::opcode::{JUMP, JUMPDEST, JUMPI, RETURN};
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    opcodes::OpCode,
+    opcodes::{OpCode, JUMP, JUMPDEST, JUMPI},
     utils::{Byte, SourceByte},
 };
 
@@ -32,28 +30,7 @@ pub struct Parsed {
     pub jt: JumpTable,
 }
 
-pub fn parse(bytecode: Vec<u8>, strip: bool) -> eyre::Result<Parsed> {
-    let mut code = bytecode;
-
-    if strip {
-        // strip until we meet RETURN
-        let mut i: usize = 0;
-
-        let index = loop {
-            if i < code.len() {
-                let v = code[i];
-                if v == RETURN {
-                    break i;
-                }
-                i += 1;
-            } else {
-                eyre::bail!("Expected to find RETURN opcode in creation code")
-            };
-        };
-
-        code.drain(..index + 1);
-    }
-
+pub fn parse(code: &[u8]) -> eyre::Result<Parsed> {
     let mut parsed: Vec<SourceByte> = Vec::new();
 
     let mut push_index: u32 = 0;
@@ -105,7 +82,7 @@ pub fn parse(bytecode: Vec<u8>, strip: bool) -> eyre::Result<Parsed> {
                         jump_table.jumpdest.insert(pc);
                     } else if op_val == JUMP || op_val == JUMPI {
                         if let Some(source_hex) = parsed.last() {
-                            if let Some(Byte::Op(op)) = source_hex.byte.get(0) {
+                            if let Some(Byte::Op(op)) = source_hex.byte.first() {
                                 if op.is_push() {
                                     let push_size = op.push_size();
                                     let hex = source_hex

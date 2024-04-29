@@ -19,10 +19,6 @@ impl OpCode {
     }
 
     pub fn push_size(&self) -> u8 {
-        if (96..128).contains(&self.0) {
-            return self.0 - 95;
-        }
-
-        0
+        self.0 - 95
     }
 }

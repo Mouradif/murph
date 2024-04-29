@@ -2,8 +2,8 @@
 mod parser_test {
     use murph::{
         opcodes::{
-            OpCode, ADD, CALLDATALOAD, DUP1, EQ, JUMP, JUMPDEST, JUMPI, MSTORE,
-            PUSH1, PUSH2, PUSH4, RETURN, SHR, SLOAD, SSTORE
+            OpCode, ADD, CALLDATALOAD, DUP1, EQ, JUMP, JUMPDEST, JUMPI, MSTORE, PUSH1, PUSH2,
+            PUSH4, RETURN, SHR, SLOAD, SSTORE,
         },
         parser::{self, JumpPack, JumpTable, JumpType},
         utils::{Byte, SourceByte},
