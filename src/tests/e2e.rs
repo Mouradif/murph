@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod e2e_test {
-    use crate::{formatter, parser};
+    use murph::{formatter, parser};
     use std::{
         fs::{self, File},
         io::{self, Write},
@@ -31,7 +31,7 @@ mod e2e_test {
 
         let huffc_bytecode = get_bytecode_from_path(get_path_str(&file_path));
         let murph_code = formatter::to_huff(
-            &mut parser::parse(hex::decode(huffc_bytecode.clone()).unwrap(), false).unwrap(),
+            &mut parser::parse(&hex::decode(huffc_bytecode.clone()).unwrap()).unwrap(),
         );
         save_temp_murph_file(&murph_code, get_path_str(&temp_path)).unwrap();
         let murph_bytecode = get_bytecode_from_path(get_path_str(&temp_path));
